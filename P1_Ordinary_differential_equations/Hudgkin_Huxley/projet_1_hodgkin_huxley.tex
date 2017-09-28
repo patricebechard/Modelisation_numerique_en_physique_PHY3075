@@ -1,0 +1,224 @@
+% -*- coding: UTF-8; -*-
+\documentclass[11pt,onecolumn]{article}
+%Pour langue et caractères spéciaux
+\usepackage[french]{babel} 
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[latin1]{inputenc}
+
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm, columnsep=20pt]{geometry}   %Pour ajuster les marges
+\usepackage{graphicx}      %pour inclure des graphiques
+\usepackage{url}           %Pour inclure des adresse web
+\usepackage{verbatim}      %pour inclure les codes en annexe, on utilisera la commande verbatim
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{amssymb}
+\usepackage{xfrac}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{listings}
+\lstset{
+basicstyle=\small\ttfamily,
+columns=flexible,
+breaklines=true
+}
+
+\renewcommand{\baselinestretch}{1.5} 
+
+\begin{document}
+
+%Page titre
+\begin{titlepage}
+\center
+
+\vspace*{2cm}
+
+\textsc{\LARGE Université de Montréal}\\[1cm] 
+\textsc{\Large PHY 3075 -- Modélisation numérique en physique}\\[1.5cm] 
+
+\rule{\linewidth}{0.5mm} \\[0.5cm]
+{\LARGE \bfseries Projet 1 - Le modèle de Hodgkin-Huxley} \\[0.2cm] % Titre page titre
+\rule{\linewidth}{0.5mm} \\[3cm]
+
+\large par: \\*
+Patrice Béchard\\*
+20019173\\[8cm] 
+
+
+{\large \today}\\[3cm]
+
+\vfill
+\end{titlepage}
+
+\section{Introduction}
+
+Les neurones sont des cellules pour lesquelles le milieu intérieur est conducteur et la membrane est une couche isolante possédant des canaux ioniques, contrôlant le passage d'électricité entre l'intérieur et l'extérieur de la cellule. Le modèle de Hodgkin-Huxley, permet de décrire ce phénomène mathématiquement par quatre équations différentielles ordinaires (EDO) présentées ci-dessous :
+
+\begin{equation}\label{eq:EDO}
+\frac{d}{dt}
+\left(
+	\begin{array}{ll}
+		V\\
+		n\\
+		m\\
+		h
+	\end{array}
+\right)
+=
+\left(
+	\begin{array}{cc}
+		\frac{1}{c_m}(I_a-g_K n^4(V-V_K)-g_{Na}m^3h(V-V_{Na})-g_L (V-V_L))\\
+		\alpha_n (V)(1-n)-\beta_n (V)n\\
+		\alpha_m(V)(1-m)-\beta_m (V)m\\
+		\alpha_h(V)(1-h)-\beta_h (V)h
+	\end{array}
+\right)
+\end{equation}
+
+où V est le potentiel transmembranaire et \textit{n}, \textit{m} et \textit{h} sont des fonctions barrières adimentionnelles. Les valeurs des différents potentiels de repos $V_{\{K, Na, L\}}$ et coefficients de conductance $g_{\{K, Na, L\}}$ sont présentées dans les notes de cours au tableau 1.2 \cite{notes_chap_1}. Les fonctions $\alpha_x(V)$ et $\beta_x(V)$ sont aussi présentées dans les notes de cours. On remarque que toutes ces équations sont fortement reliées entre eux, signe que ce système est très non-linéaire. 
+
+Pour résoudre ce système d'EDO, la méthode de Runge-Kutta sera utilisée. Cette méthode utilise quatre estimés de pente pour itérer dans le temps et ainsi trouver le comportement des EDO. La méthode de Runge-Kutta peut cependant s'avérer imprécise lorsque le système est très fortement non-linéaire, comme c'est le cas ici. Pour remédier à ce problème, cette méthode sera combinée avec un pas adaptif, comparant deux solutions (une obtenue avec un pas entier, puis l'autre avec deux demi-pas), et adaptera la longueur du pas en fonction de la différence entre ces deux résultats.
+
+Une vérification du code se fera tout d'abord avec des résultats connus dans la section \ref{sec:validation} (voir notes de cours\cite{notes_chap_1}), puis suivra une exploration numérique de divers phénomènes sur le modèle de Hodgkin-Huxley dans la section \ref{sec:results}. Une version du code ainsi que figures sont disponibles en couleur ainsi qu'en pleine résolution à l'adresse suivante : \url{goo.gl/DxpB6g}.
+
+\section{Validation du code}\label{sec:validation}
+
+Pour s'assurer de la validité du code, une reproduction des figures 1.14 à 1.17 des notes de cours a été faite avec programme qui sera utilisé pour faire l'exploration numérique subséquente. La figure \ref{fig:equilibre} présente les valeurs à l'équilibre ainsi que le temps de relaxation des fonctions barrières \textit{n}, \textit{m} et \textit{h} en fonction du potentiel transmembranaire, reproduisant la figure 1.14 des notes de cours.
+
+\begin{wrapfigure}{l}{10cm}
+\includegraphics[width=10cm]{figures/verif_equilibre_save.png}
+\caption{\small{Valeurs à l'équilibre et temps de relaxation des fonctions barrières \textit{n}, \textit{m} et \textit{h} du modèle de Hodgkin-Huxley en fonction du potentiel transmembranaire V. Les valeurs à l'équilibre de \textit{n}, \textit{m} et \textit{h} à V=0 sont utilisés dans le modèle de Hodgkin-Huxley comme condition initiale.}}
+\label{fig:equilibre}
+\end{wrapfigure} 
+
+Chacune des courbes tracées semble exactement répliquer celles présentées à la figure 1.14 des notes de cours, signe que le programme développé fait bel et bien le travail voulu en ce qui a trait aux valeurs à l'équilibre et aux temps de relaxation des fonctions barrière.
+
+La prochaine vérification à faire est au niveau de la propagation du modèle dans le temps. La figure \ref{fig:v_and_x}, analogue à la figure 1.15 des notes de cours, présente la progression dans le temps des trois fonctions barrières ainsi que du potentiel transmembranaire V, où un courant de $7\mu A/cm^2$ est appliqué pendant une milliseconde au début de la simulation (représenté par la région grise). Au départ, le potentiel transmembranaire ainsi que les fonctions barrières se trouvent à leur valeur d'équilibre, selon la figure \ref{fig:equilibre}. Le potentiel croît linéairement lors de l'application du courant externe, et les fonctions barrières dévient de leur valeur à l'équilibre légèrement. Après que ce courant ait été appliqué, le potentiel transmembranaire continue à croître lentement et croît ensuite très rapidement après $5ms$. Ce pic est appelé \textit{potentiel d'action}. Le potentiel transmembranaire décroît ensuite très rapidement jusqu'à un potentiel sous sa valeur d'équilibre, avant de revenir lentement vers celle-ci. La forme de la courbe empruntée par le potentiel transmembranaire, ainsi que celle empruntée par les différentes fonctions barrières est la même que celle obtenue à la figure 1.15 des notes de cours, signe que le programme utilisé est correct. Le point quadruple aux alentours de 5ms et 40mV est aussi répété dans les deux figures, nous indiquant que l'algorithme utilisé est équivalent pour les deux figures en terme de résultats.
+
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.8]{figures/verif_V_and_x_save.png}
+\caption{\small{Évolution du potentiel transmembranaire V et des fonctions barrières \textit{n}, \textit{m} et \textit{h} en fonction du temps écoulé après avoir implanté un courant de $7\mu A/cm^2$ pendant 1ms. Le potentiel et les fonctions barrières se trouvent initialement à l'équilibre.}}
+\label{fig:v_and_x}
+\end{figure}
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.8]{figures/verif_diff_courant_2.png}
+\caption{\small{Évolution du potentiel transmembranaire V en fonction du temps écoulé après avoir implanté pendant 1ms différentes valeurs de courant. Le potentiel initial est fixé à sa valeur d'équilibre, soit 0, et les fonctions barrières sont initialement établies à leur valeur d'équilibre correspondantes. Le seuil de courant à dépasser pour observer un potentiel d'action se trouve entre 6.9 et 7.0 $\mu A/cm^2$. }}
+\label{fig:diff_cour}
+\end{figure}
+
+\begin{figure}[t]
+\center
+\includegraphics[scale=0.8]{figures/verif_progr_courant_cst_2.png}
+\caption{\small{Évolution du potentiel transmembranaire V en fonction du temps écoulé en implantant un courant constant tout au long de la simulation pour deux valeurs différentes de courant. Le potentiel initial est fixé à sa valeur d'équilibre, soit 0, et les fonctions barrières sont initialement établies à leur valeur d'équilibre correspondantes. Le signal est périodique dans le cas du plus grand courant, alors qu'il s'affaisse rapidement dans l'autre.}}
+\label{fig:diff_cour_cont}
+\end{figure}
+
+La figure \ref{fig:diff_cour} présente l'évolution du potentiel transmembranaire V après une impulsion initiale durant 1ms de courant de 8$\mu A/cm^2$, 7$\mu A/cm^2$ et 6.9$\mu A/cm^2$, respectivement. Le potentiel d'action est déclenché plus tôt lorsque l'impulsion initiale est de plus grande norme (8$\mu A/cm^2$, dans notre cas), et il existe un seuil minimal en dessous duquel il est impossible de déclencher ce potentiel d'action. Cette caractéristique est observable en comparant les courbes à 7$\mu A/cm^2$ et 6.9$\mu A/cm^2$ deux valeurs de courant très rapprochées, mais qui influencent le système de façon très différentes l'une de l'autre, puisque le courant de 6.9$\mu A/cm^2$ ne déclenche jamais de croissance rapide du potentiel transmembranaire. Cette figure est encore une fois une réplique presque parfaite de la figure 1.16 des notes de cours, signe que le programme utilisé fonctionne de la façon voulue.
+
+La figure \ref{fig:diff_cour_cont} est la dernière figure étudiée pour faire la vérification du code. Celle-ci présente encore une fois l'évolution du potentiel transmembranaire dans le temps, mais cette fois-ci sous l'action d'un courant constant tout au long de la simulation. Deux valeurs de courant ont été étudiées, soit à 6.0$\mu A/cm^2$ et à 10.0$\mu A/cm^2$. La principale différence entre les deux courbes tracées est que celle pour un courant de 10.0$\mu A/cm^2$ produit un signal périodique se répétant indéfiniment avec la même amplitude ainsi que la même fréquence, tandis que l'autre courbe n'est plus en mesure de produire des potentiels d'actions après le deuxième pic, et ce, malgré qu'il y ait un courant constant pour toute la simulation. Une analyse plus détaillée du phénomène sera présentée à la section \ref{sec:results}. La figure présentée est identique à la figure 1.17 des notes de cours, terminant une fois pour toute la validation de notre code, qui semble produire les résultats voulus pour les différents aspects du modèle de Hodgkin-Huxley étudiés.
+
+
+\section{Résultats et discussion}\label{sec:results}
+
+Une analyse détaillée du potentiel transmembranaire en fonction de l'intensité du courant appliqué en continu a été menée pour des intensités de courant allant de 0 à 50 $\mu A/cm^2$. Le but était d'observer une relation entre le courant appliqué et la fréquence des pics répétés ainsi que leur amplitude. Il a été aussi possible de découvrir plusieurs régimes de courant pour lesquels la réponse du potentiel transmembranaire était très différente. Ceux-ci sont présentés au tableau \ref{tab:regimes}. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{ c | c  }
+Plage de courant [$\mu A/cm^2$] & Nombre de pics observés\\
+$(\pm0.0005)$  \\
+\hline
+$[0 , 2.2410]$ & 0\\
+$[2.2410 , 5.9726]$ & 1\\
+$[5.9726 , 6.1716]$ & 2 \\
+$[6.1716 , 6.2171]$ & 3 \\
+$[6.2171 , 6.2355]$ & 4 \\
+$[6.2355 , 6.2640]$ & Nombre croissant \\
+$[6.2640 , 50.0]$ & Tous
+\end{tabular}
+\caption{\label{tab:regimes}\small{Nombre de maxima observés en fonction de l'intensité du courant continu appliqué.}}
+\end{table}
+
+Il est observé qu'avant un courant seuil, soit $2.2410\pm0.0005\mu A/cm^2$, aucun potentiel d'action n'est déclenché par le courant continu. Pour les valeurs de courant entre 2.2410 et 6.2640 $\mu A/cm^2$, le nombre de pics observés est fini et dépend de l'intensité du courant. Après le courant seuil de $6.2640\pm0.0005mu A/cm^2$, le signal devient périodique indéfiniment et les potentiels d'action sont toujours entraînés. L'allure de l'amplitude moyenne ainsi que la fréquence à laquelle les potentiels d'action surviennent en fonction du courant sont présentés à la figure \ref{fig:ampl_freq}. Le graphique ne montre que la portion d'intérêt, juste après le courant seuil.
+
+\begin{figure}[ht]
+\center
+\includegraphics[scale=0.7]{figures/freq_ampl_sv.png}
+\caption{\small{Amplitude moyenne et fréquence des potentiels d'action engendrés par un courant continu en fonction de celui-ci.}}
+\label{fig:ampl_freq}
+\end{figure}
+
+La distribution de l'amplitude des maxima semble atteindre un maximum aux alentours de 8$\mu A/cm^2$, après quoi elle diminue en augmentant le courant. Cette tendance semble être linéaire à partir de 10$\mu A/cm^2$ et continue pour toutes les valeurs mesurées, soit jusqu'à 50$\mu A/cm^2$.  La tendance empruntée par la fréquence est aussi linéaire à partir de 10$\mu A/cm^2$. Le fait que la fréquence grandit en fonction du courant appliqué est bien visible sur a figure \ref{fig:diff_cour_cont}, où les pics du courant plus grand devancent ceux du courant plus petit dès le début. Le système aura donc tendance à posséder des pulses de potentiels d'action de plus en plus rapprochés, mais de plus en plus faibles en augmentant la norme du courant appliqué.
+
+L'effet de deux pulses de 1ms sur le système a aussi été étudié pour trouver après quelle intervalle de temps ces deux pulses peuvent engendrer deux potentiels d'action. En utilisant deux pulses de 10$\mu A/cm^2$, il a été observé que le début de chacun des pulses devait être séparé de $14.5240\pm0.0010ms$ avant de pouvoir engendrer deux potentiels d'action. La figure \ref{fig:deux_pulses} présente l'impact sur le système de deux pulses séparés de 14.523ms et 14.525ms du pulse original. Le courant déclenché seulement 0.002ms plus tard fait apparaître un second potentiel d'action.
+
+D'autres tests ont été effectués avec des grandeurs de courant de 11 à 30 $\mu A/cm^2$ pour le second pulse. L'écart temporel minimal pour chacune de ces grandeurs de courant a été mis en graphique à la figure \ref{fig:deltaT} et une régression exponentielle a été tracée en fonction des données obtenues. L'équation de cette régression exponentielle est présentée dans la figure. En théorie, en suivant cette courbe, lorsque la norme du courant appliqué tendra vers l'infini, un potentiel d'action pourra être déclenché de plus en plus tôt en tendant vers 0. Cependant, en pratique, il est impossible que le potentiel d'action devance le premier étant créé, ce qui veut dire qu'un $\Delta t_{seuil}$ d'au moins 5ms doit exister. De plus, lorsque le courant est très grand, celui-ci semble engendrer à lui-seul le pic de potentiel transmembranaire, signe que le potentiel d'action observé n'en est pas un.
+
+
+\begin{figure}[ht]\hfill
+        \begin{subfigure}[b]{0.47\textwidth}
+               \centering
+		\includegraphics[scale=0.65]{figures/pulse10.png}
+		\caption{\small{Évolution du potentiel transmembranaire en fonction du temps lors d'une implantation de deux pulses de courant de 10$\mu A/cm^2$, le premier était à t=0ms, et le second était à 14.523ms et à 14.525 pour 	les deux cas différents étudiés. Le potentiel initial est fixé à 0 et les fonctions barrières sont initialement à leurs valeurs d'équilibre correspondantes.}}
+		\label{fig:deux_pulses}
+        \end{subfigure}%
+        \qquad
+        \begin{subfigure}[b]{0.47\textwidth}
+               \centering
+		\includegraphics[scale=0.65]{figures/deltatemps.png}
+		\caption{\small{$\Delta t_{seuil}$ minimal en fonction de la norme du courant implanté pendant le second pulse. La courbe décrite par les données propose une solution exponentielle décroissante, signe qu'il n'y a pas de temps minimal à attendre avant de déclencher un second potentiel d'action.}}
+		\label{fig:deltaT}
+        \end{subfigure}%
+        \caption{Réponse du potentiel transmembranaire à une succession de deux pulses pour lesquelles l'intensité du second pulse a varié en fonction des simulations.}
+\end{figure}
+
+Le dernier aspect exploré par-rapport au modèle de Hodgkin-Huxley est le fait que le temps caractéristique de la fonction barrière \textit{m} est beaucoup plus court que le temps caractéristique des deux autres fonctions barrières (\textit{n} et \textit{h}), comme on peut le voir sur la figure \ref{fig:equilibre}. Il est possible de voir si la fonction barrière \textit{m} a une influence sur le modèle de Hodglin-Huxley en l'enlevant tout simplement du système d'EDO présenté à l'équation \ref{eq:EDO} et en simulant le modèle numériquement. En comparant le résultat obtenu avec les résultats obtenus à la section \ref{sec:validation}, il est possible d'observer les changements qu'engendrent l'omission l'EDO reliée à cette fonction barrière, présentés à la figure \ref{fig:sans_m}.
+
+\begin{figure}[ht]\hfill
+        \begin{subfigure}[b]{0.47\textwidth}
+               \centering
+		\includegraphics[scale=0.65]{figures/without_m_pulse.png}
+		\caption{\small{Évolution du potentiel transmembranaire après l'application d'un courant pendant 1ms au début de la simulation. La fonction barrière \textit{m} du modèle de Hudgkin-Huxley est gardée constante pour cette simulation. Le potentiel transmembranaire est initialement fixé à 0 et les fonctions barrières \textit{n} et \textit{h} sont initialement fixées à leur valeur d'équilibre respective.}}
+		\label{fig:sans_m_pulse}
+        \end{subfigure}%
+        \qquad
+        \begin{subfigure}[b]{0.47\textwidth}
+               \centering
+		\includegraphics[scale=0.65]{figures/without_m_continue.png}
+		\caption{\small{Évolution du potentiel transmembranaire lors d'une application continue d'un courant électrique lors de la simulation. La fonction barrière \textit{m} du modèle de Hudgkin-Huxley est gardée constante pour cette simulation. Le potentiel transmembranaire est initialement fixé à 0 et les fonctions barrières \textit{n} et \textit{h} sont initialement fixées à leur valeur d'équilibre respective.}}
+		\label{fig:sans_m_continu}
+        \end{subfigure}%
+        \caption{Réponse du potentiel transmembranaire lorsque la fonction barrière \textit{m} est gardée constante.}
+        \label{fig:sans_m}
+\end{figure}
+
+Le premier cas étudié est lorsqu'une impulsion de courant de 1ms est appliquée au système au début de la simulation. Tout comme pour la figure \ref{fig:diff_cour}, des courants de 6.9, 7 et 8 $\mu A/cm^2$ ont été appliqués sur le système initialement à l'équilibre. La figure \ref{fig:sans_m_pulse} présente le cas mentionné. Dans cette situation, aucun potentiel d'action n'est créé suite au pulse de courant, et ce, peu importe l'intensité du courant, de sorte que les trois courbes simulées se superposent presque parfaitement. De plus, puisqu'aucun potentiel d'action n'est créé, l'amplitude du potentiel transmembranaire reste très faible et le retour à l'équilibre arrive vers 10 ms, comparativement au cas où l'EDO dépendant de la fonction barrière \textit{m} n'était pas omise, alors que le retour a l'équilibre arrivait vers 20ms.
+
+L'autre cas étudié est lorsque le courant appliqué est constant tout au long de la simulation numérique. Cette situation était présentée à la figure \ref{fig:diff_cour_cont} dans le cas où l'EDO reliée à la fonction barrière \textit{m} n'était pas négligée, et ce, pour des courants de 6 et 10 $\mu A/cm^2$. La même situation a été simulée sans l'EDO modulant la fonction barrière \textit{m}. Le résultat de la simulation est présenté à la figure \ref{fig:sans_m_continu}. Plusieurs caractéristiques de la simulation originale ne sont plus présentes dans la simulation sans variation de la fonction barrière. Tout d'abord, aucun potentiel d'action n'est déclenché peu importe la grandeur du courant. Le caractère périodique du signal est lui aussi absent de cette simulation, ne possédant qu'un maximum au début sans avoir d'autre pics par la suite. Finalement, la valeur du potentiel transmembranaire s'équilibre à une valeur non-nulle pour le reste de la simulation, phénomène n'ayant pas été observé auparavant dans aucune situation.
+
+Le fait d'enlever l'EDO responsable de la modulation de la fonction barrière \textit{m} change donc complètement le modèle de Hodgkin-Huxley étudié plus tôt, puisque suite à son omission, aucune caractéristique présente dans les simulations précédentes n'est observée. Il n'est pas possible non plus de négliger la modulation des autres fonctions barrières, puisque leur omission mène à des conclusions semblables. Cela dit, puisque le temps caractéristique des deux autres fonctions barrières était plus important, cette conclusion pouvait facilement être prédite.
+
+
+\section{Programme}
+\renewcommand{\baselinestretch}{1.} 
+
+\verbatiminput{HudgkinHuxley.py}
+
+
+\begin{thebibliography}{1}
+
+\small
+\bibitem{notes_chap_1} Charbonneau, P., \textit{PHY3075 - Modélisation numérique en physique, Chapitre 1 : Équations différentielles ordinaires}, Université de Montréal, Montréal, 2017, 30p.
+\end{thebibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Annexes %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

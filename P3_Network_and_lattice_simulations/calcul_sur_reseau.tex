@@ -1,0 +1,324 @@
+% -*- coding: UTF-8; -*-
+\documentclass[11pt,onecolumn]{article}
+%Pour langue et caractères spéciaux
+\usepackage[french]{babel} 
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[latin1]{inputenc}
+
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm, columnsep=20pt]{geometry}   %Pour ajuster les marges
+\usepackage{graphicx}      %pour inclure des graphiques
+\usepackage{url}           %Pour inclure des adresse web
+\usepackage{verbatim}      %pour inclure les codes en annexe, on utilisera la commande verbatim
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{amssymb}
+\usepackage{xfrac}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{listings}
+\lstset{
+basicstyle=\small\ttfamily,
+columns=flexible,
+breaklines=true
+}
+
+\renewcommand{\baselinestretch}{1.5} 
+
+\begin{document}
+
+%Page titre
+\begin{titlepage}
+\center
+
+\vspace*{2cm}
+
+\textsc{\LARGE Université de Montréal}\\[1cm] 
+\textsc{\Large PHY 3075 -- Modélisation numérique en physique}\\[1.5cm] 
+
+\rule{\linewidth}{0.5mm} \\[0.5cm]
+{\LARGE \bfseries Projet 3 - Calcul sur réseau} \\[0.2cm] % Titre page titre
+\rule{\linewidth}{0.5mm} \\[3cm]
+
+\large par: \\*
+Patrice Béchard\\*
+20019173\\[8cm] 
+
+
+{\large \today}\\[3cm]
+
+\vfill
+\end{titlepage}
+
+\section{Introduction}
+
+Le calcul sur réseau est une méthode numérique permettant d'effectuer une suite d'opérations sur un nombre d'éléments connectés entre eux et dépendant chacun d'eux. Ce réseau peut en théorie être autant un réseau périodique et géométrique qu'un réseau aléatoire. 
+
+L'étude du modèle d'Ising et de la gravure magnétique a été conduite en effectuant un calcul sur réseau pour connecter toutes les composantes du système. Il est ainsi possible de modéliser l'interaction d'un amalgame de particules ordonnées et liées de façon méthodique. En connaissant l'orientation des voisins de chacune des cellules d'un réseau, il est possible de modéliser numériquement le modèle d'Ising pour la magnétisation d'un matériau. 
+
+L'étude de la propagation d'un virus sur un réseau suivant le modèle de Barabási-Albert a aussi été étudiée en suivant divers modèles épidémiques, soit les modèles SIR, SEIR et SIRS.
+
+Ce document présentera tout d'abord une validation du programme construit, suivi d'une présentation des résultats obtenus pour la simulation du modèle d'Ising et de la gravure magnétique, puis se concluera par une exploration numérique d'une propagation épidémique sur un réseau réel. Les différentes figures présentes dans ce document, ainsi que les codes utilisés et quelques animations sont fournies sur le dépôt public situé à l'adresse suivante : \url{goo.gl/FeIY1o}
+
+
+\section{Validation du code}\label{sec:validation}
+
+La première étape sera de reproduire certaines figures des notes de cours pour ainsi valider le programme construit et s'assurer qu'il effectue bien ce qui est attendu de lui. Pour commencer, pour s'assurer que notre simulation numérique du modèle d'Ising est correcte, les figures 3.15 et 3.16 des notes de cours ont été répliquées. Celles-ci sont présentés aux figures \ref{fig:3.15} et \ref{fig:3.16}.
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.8]{figures/enerspin100_save.png}
+\caption{\small{Séquences temporelles de l'énergie moyenne par spin dans trois simulations sur réseau $64 \times 64$ avec $J=1$ et $H=0$, pour trois températures différentes, tel qu'indiqué. Un réseau où tous les spins sont parfaitement alignés aurait une énergie par spin de $-4$ ici.}}
+\label{fig:3.15}
+\end{figure}
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.8]{figures/magnetspin5000_save.png}
+\caption{\small{Séquences temporelles de la magnétisation m pour les trois même simulations que ci-dessus. Notez l'échelle temporelle poussée ici à 5000 itérations, versus seulement 100 sur la Fig. \ref{fig:3.15}.}}
+\label{fig:3.16}
+\end{figure}
+
+Le comportement de l'énergie par spin en fonction de la température présenté à la figure \ref{fig:3.15} est identique à la figure 3.15 des notes de cours, mis à part les fluctuations reliées à la configuration initiale aléatoire du système. Chaque courbe tracée pour chaque température se stabilise aux mêmes valeurs qu'observé à la figure 3.15. 
+
+Le comportement de la magnétisation par spin en fonction de la température présenté à la figure \ref{fig:3.16} est encore une fois très similaire à la figure 3.16 des notes de cours. La courbe tracée pour la température $T=5.00$ se stabilise à une valeur nulle, alors que celle tracée pour la température $T=2.35$ oscille aléatoirement autour de cette valeur. La courbe tracée pour la température $T=1.5$ est cependant renversée par-rapport à celle présentée à la figure 3.16. Cette situation est cependant tout-à-fait normale, mais cette fois-ci, le système s'est stabilisé dans l'état où tous les spins du réseau possèdent une valeur de $-1$ au lieu d'une valeur de $1$. Ces deux situations possèdent la même énergie par spin, alors celles-ci sont équiprobables
+
+Des animations de l'évolution du modèle d'Ising à ces températures ont été faites sur 500 itérations et sont disponibles sur le dépôt public dont l'adresse est donnée plus haut. Pour une température $T=1.5$, toutes les cellules du réseau vont converger vers un même spin. Pour une température $T=5.0$, les fluctuations thermiques sont trop grandes, et aucune domaine local n'apparaît. Le réseau est alors en régime presque complètement aléatoire. Finalement, pour une température $T=2.35$, des régions où le spin est identique se développent et changent dans le temps sans jamais dominer complètement le réseau total. Des domaines de magnétisation locaux apparaissent et disparaissent au fil de la simulation. 
+
+La seconde partie de la vérification du programme consiste à répliquer la figure 3.20 des notes de cours, montrant le comportement du modèle d'Ising lorsqu'une magnétisation extérieure est introduite. Celle-ci sera tout d'abord une magnétisation variant sinusoïdalement sur une période de 500 itérations. Le résultat de cette simulation est présenté à la figure \ref{fig:3.20}.
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.8]{figures/ext_magn_5000_save.png}
+\caption{\small{Séquences temporelles de la magnétisation moyenne par spin (traits pleins) dans un réseau $64 \times 64$ avec J = 1, sujet à une magnétisation extérieure variant sinusoïdalement dans le temps (traits pointillés). Les quatre solutions sont obtenues avec des amplitudes de magnétisation extérieure $H_0$ et température T telles qu'indiquées. Dans tous les cas la condition initiale est aléatoire, et la période de la magnétisation extérieure est $P = 500$ itérations.}}
+\label{fig:3.20}
+\end{figure}
+
+Le comportement de la magnétisation sur la première ainsi que la dernière figure sur la Fig.\ref{fig:3.20} est identique au comportement de la magnétisation sur la figure 3.20 des notes de cours. Cependant, le comportement de la magnétisation sur les deux figures du centre présentent moins d'anomalies que la figure des notes de cours, signe que les algorithmes utilisés n'ont pas exactement le même comportement dans les deux cas. La simulation a été répétée plusieurs fois pour s'assurer qu'il ne s'agissait pas seulement d'une erreur due à la configuration aléatoire initiale, et aucune différence n'a été observée dans ces autres simulations. 
+
+La dernière étape de la validation consiste à chauffer une partie du domaine pendant un cours instant dans le but de graver un bit sur le réseau. La figure 3.22 des notes de cours a été répliquée pour montrer ce phénomène et est présentée à la figure \ref{fig:3.22}
+
+\begin{figure}[h]
+\center
+\includegraphics[scale=1]{figures/fig_322_good.png}
+\caption{\small{Séquences temporelles de la magnétisation moyenne par spin sur un réseau $64\times64$ avec  $J = 1$, initialement magnétisé positivement ($\uparrow$) partout, et sujet à un champ extérieur $H = ?0.2$ et un pulse thermique de forme circulaire en son centre (ligne pointillée montre l'amplitude). Les paramètres du profil de chauffage (voir notes de cours) sont $(j_0 , k_0) = (32,32)$, $R = 10$, $t_0 = 100$, et $\sigma = 10$. La courbe s'immobilisant à $\approx 0.85$ utilise $T_0 = 0.1$ et $\Delta T = 2.4$, tandis que pour les deux autres courbes utilisent $T_0 = 0.5$ et $\Delta T = 2.0$, ces deux simulations ne différant qu'au niveau de la séquence de nombres aléatoires utilisée.}}
+\label{fig:3.22}
+\end{figure}
+
+La figure produite ressemble très fortement à celle présentée dans les notes de cours. Quelques détails sont tout de même à soulever. Tout d'abord, la magnétisation totale pour la gravure réussie d'un bit est plus petite que celle présentée dans les notes de cours. Cela est tout simplement dû au fait que le bit gravé est de plus grande taille. Ce détail dépend de la séquence de nombres aléatoires utilisés. Ensuite, le cas où le bit gravé \textit{envahit} le domaine au complet semble se propager plus rapidement que sur la figure 3.22 des notes de cours. La même raison est ici en cause. C'est cette raison qui cause aussi la convergence très rapide vers la configuration initiale du bit gravé dans le cas où il ne se propage pas, mais est plutôt effacé par le système. Plusieurs simulations du même système nous montre très clairement que la suite de nombres aléatoires choisis influence grandement le destin du bit gravé pour des températures critiques.
+
+Une animation de la gravure du bit dans le cas où celle-ci est réussie et stable est fournie dans le dépôt public mentionné plus tôt. La figure \ref{fig:bitvalid} montre le bit tracé stable à la fin de la simulation.
+
+\begin{figure}[h]
+\center
+\includegraphics[scale=0.4]{figures/bit_chess.png}
+\caption{\small{Bit tracé par gravure magnétique sur le domaine avec une magnétisation extérieure $H=-0.2$ et un profil de température variant selon un profil gaussienne d'amplitude $2.4$.}}
+\label{fig:bitvalid}
+\end{figure}
+
+\section{Résultats et discussion}\label{sec:results}
+
+Pour l'étape de la vérification, un \textit{stencil} de Von Neumann a été utilisée. Il est possible de répéter la simulation pour différents stencils, soit le stencil de Moore ainsi que le stencil triangulaire. Cette section présentera l'évolution du modèle d'ising selon ces deux différents stencils, ainsi que la gravure magnétique d'un bit grâce à ceux-ci.
+
+Tout d'abord, il est possible de modifier l'algorithme d'évolution de la grille pour faire évoluer le système en prenant un différent stencil que le stencil de Von Neumann, n'utilisant que les 4 voisins immédiats de la cellule à l'étude. Le stencil de Moore prend aussi en compte les quatre voisins diagonaux de la cellule d'intérêt, et ce, avec un poids deux fois moins grand que celui associé aux quatres voisins de Von Neumann. Le stencil triangulaire prend en compte le voisin nord-est ainsi que le voisin sud-ouest de la cellule d'intérêt avec le même poids que pour les quatre voisins de Von Neumann. L'algorithme d'évolution de type \textit{damier} (voir notes) ne peut pas être appliquée avec ces stencils, puisque cela introduirait un biais dans notre système. Une méthode alternative est donc de copier la grille au complet avant l'évolution de celle-ci pendant une itération pour connaître l'alignement de chaque cellule avant l'évolution. Cette méthode n'est cependant pas tout-à-fait en accord avec l'algorithme de Métropolis responsable du changement d'orientation d'une cellule. En effet, dans le cas des trois stencils à l'étude, en partant d'une distribution des orientations aléatoire, la méthode d'évolution de \textit{copie} tend vers un état \textit{clignotant}, où chaque cellule change d'orientation à chaque itération dans la plage de températures où des domaines de magnétisation devraient apparaître. Un exemple de ce phénomène pour le stencil de Moore est présenté à la figure \ref{fig:blink}. Une animation de cette situation est fournie dans le dépôt public mentionné plus haut.
+
+\begin{figure}[h]
+\center
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.4]{figures/blink1.png}
+	\end{subfigure}
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.4]{figures/blink2.png}
+	\end{subfigure}
+\caption{\small{Configuration de la grille pour deux itérations successives en utilisant le stencil de Moore avec la méthode d'évolution de \textit{copie}. Chaque cellule possède des orientations inversées. Le modèle est dans une configuration \textit{clignottante}. Ce problème survient avec tous les stencils utilisés.}}
+\label{fig:blink}
+\end{figure}
+
+Il est tout de même possible d'étudier la gravure d'un bit sur notre domaine en utilisant ces stencils. Cependant, les bits produits seront moins stables qu'ils l'étaient avec la méthode précédemment étudiée. Les bits obtenus avec la méthode d'évolution de copie pour les trois stencils utilisés sont présentés à la figure \ref{fig:bitstencils}. Des animations pour la formation de chacun de ces bits est disponible sur le dépôt public mentionné plus haut.
+
+\begin{figure}[h]
+\center
+	\begin{subfigure}[h]{0.3\textwidth}
+	\includegraphics[scale=0.35]{figures/bit_vn.png}
+	\end{subfigure}
+	\begin{subfigure}[h]{0.3\textwidth}
+	\includegraphics[scale=0.35]{figures/bit_mo.png}
+	\end{subfigure}
+	\begin{subfigure}[h]{0.3\textwidth}
+	\includegraphics[scale=0.35]{figures/bit_tr.png}
+	\end{subfigure}
+\caption{\small{Bits tracés par gravure magnétique pour la méthode d'évolution de copie pour les stencils de Von Neumann, Moore et triangulaire, respectivement. $\Delta t=2.4$ pour le stencil de Von Neumann, et $\Delta t=4.0$ pour les deux autres stencils.}}
+\label{fig:blink}
+\end{figure}
+
+Le bit tracé avec le stencil de Von-Neumann est carré et est entouré d'une région en régime clignotant (cellules alternées blanc/noir, voir animation). Le bit tracé avec le stencil de Moore possède plutôt une forme patatoïdale et ses bords sont constitués de cellules clignotantes elles-aussi. Finalement, le bit tracé par le stencil triangulaire n'est pas non plus rectangulaire et les bords sont aussi constitués de cellules clignotantes. Les bits sont donc tout de même tracés, mais leur stabilité est moins grande que pour le bit tracé dans la section de validation.
+
+\section{Exploration Numérique : Modèle de Barabási-Albert et propagation de virus}\label{sec:exploration}
+Plusieurs réseaux retrouvés dans la réalité ne sont pas que des réseaux symétriques comme étudiés jusqu'à présent : les liens entre les noeuds peuvent se partager aléatoirement ou selon d'autres règles mathématiques. À la fin des années 90, l'équipe du physicien Albert-László Barabási ont découvert, en mappant le domaine WWW de l'université Notre-Dame aux États-Unis, que la distribution de degré de chaque noeud (nombre de connections allant vers un noeud et partant de celui-ci) pouvait être représenté comme une loi de puissance. De plus, ils ont aussi découvert que plusieurs autres réseaux réels tels que le réseau électrique, le réseau des collaborations scientifiques, le réseau des acteurs d'Hollywood, les interactions protéine-protéine et le métabolisme de la bactérie \textit{E. Coli} suivaient aussi cette loi. Cette équipe a développé un modèle théorique de réseau invariant d'échelle possédant une distribution de degré allant en loi de puissance, appelé le \textit{modèle de Barabási-Albert}, basé sur deux caractéristiques importantes : la \textit{croissance} et l'\textit{attachement préférentiel}, se basant donc sur l'évolution du réseau dans le temps pour faire émerger les caractéristiques s'apparentant aux réseaux réels\cite{network_science}. Le document cité offre de plus amples détails sur les mathématiques reliés au modèle, ainsi que quelques algorithmes pour construire un réseau selon le modèle.
+
+L'exploration numérique de ce chapitre portera donc sur la propagation d'information dans un tel réseau. Ce phénomène est facilement applicable à la réalité, par exemple lors de la propagation d'une maladie sur la planète lors d'une épidémie. Chaque noeud représentera un aéroport, lesquels seront reliés par des vols. Plusieurs noeuds ne possèdent qu'un petit degré (ex. aéroport Saguenay-Bagotville, aéroport Lyon Saint-Exupéry), mais un plus petit nombre d'aéroport possèdent un très grand degré (ex. aéroport LAX, aéroport Charles de Gaulle), appelés \textit{hubs}. Il est facile d'imaginer que si un passager atteint d'un virus passe par un de ces aéroports très achalandés, les probabilités que celui-ci infecte d'autres passagers et que le virus se transmette à plusieurs autres endroits sur la planète devient très grand. Il est donc important de prévoir ce genre de scénario pour empêcher une catastrophe à grande échelle. Différents modèles épidémiques seront utilisés. Ceux-ci sont présentés plus bas\cite{SIR}\cite{epidemic}. La propagation des virus selon les différents modèles épidémiques se fera sur un réseau possédant 1000 noeuds que l'on a fait évoluer sur 100 itérations temporelles. Différentes animations de ces simulations sont fournies sur le dépôt public annoncé plus tôt.
+
+Le premier modèle épidémique étudié sera le modèle \textit{SIR}, développé par Kermack et McKendrick en 1927. Celui-ci inclue trois catégories de personnes:
+\begin{itemize}
+	\item \textbf{S} : Les personnes \textit{Susceptibles} sont celles qui peuvent contracter la maladie.
+	\item \textbf{I} : Les personnes \textit{Infectées} sont celles pouvant transmettre la maladie.
+	\item \textbf{R} : Les personnes \textit{Éliminées (Removed)} sont celles qui ont déjà contracté le virus et qui ne l'one plus. Ils ne peuvent pas la recontracter. Par exemple, ils ces personnes peuvent être mortes ou immunisés.
+\end{itemize}
+
+Ce modèle épidémique est plutôt simple, sans toutefois trop l'être pour devenir irréaliste. Ce genre de modèle épidémique peut être appliqué à la varicelle ou la mononucléose, par exemple, où il nous est impossible de le recontracter la maladie une seconde fois.
+
+L'algorithme utilisé est le suivant:
+\begin{enumerate}
+	\item On choisit un noeud au hasard dans le réseau et on l'infecte.
+	\item On regarde tous les noeuds voisins des noeuds infectés du réseau. Pour chaque noeud voisin, si un nombre aléatoire tiré est plus petit qu'une certaine probabilité de transmission, le noeud est alors infecté ($S\rightarrow I$).
+	\item Si un noeud est infecté pendant un certain nombre d'itérations, on l'élimine des noeuds contaminés ($I \rightarrow R$).
+	\item On répète les étapes 2 et 3 pour un nombre d'itérations donné.
+\end{enumerate}
+
+Tout d'abord, la probabilité d'infection d'un nouveau noeud par un noeud infecté a été variée entre 0 et 1 pour trouver comment la propagation d'un virus dépendait de celle-ci. Deux cas différents ont été tracés à la figure \ref{fig:SIRprobinfection} et un graphique de la fraction de noeuds en santé à la fin de la simulation sur le nombre de noeuds total a été tracé en fonction de la probabilité d'infection à la figure \ref{fig:SIRvarprobInfec}
+
+\begin{figure}[p]
+\center
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/distSIR1000_100_35_save.png}
+	\end{subfigure}
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/distSIR1000_100_75_save.png}
+	\end{subfigure}
+\caption{\small{Évolution des populations des différentes catégories de personnes pour des simulations avec des probabilités d'infection $p_I=0.35$ et $p_I=0.75$ pour le modèle épidémique SIR. La population de noeuds susceptibles de contracter la maladie (en santé) reste non-nulle après l'arrivée à l'équilibre dans la figure de gauche, alors que celle-ci est nulle lorsque la probabilité d'infection est trop élevée, comme dans la figure de droite. Le nombre maximal de personnes infectées en même temps est beaucoup plus grand pour la simulation à droite que celle à gauche. Une personne infectée reste dans cet état pendant 5 itérations, après quoi elle devient éliminée.}}
+\label{fig:SIRprobinfection}
+\end{figure}
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.7]{figures/okmilleurSIR.png}
+\caption{\small{Fraction de noeuds susceptibles de contracter la maladie (en santé) à la fin de plusieurs simulations en fonction de la probabilité d'infection pour 200 simulations.}}
+\label{fig:SIRvarprobInfec}
+\end{figure}
+
+La figure \ref{fig:SIRvarprobInfec} montre clairement un changement de phase du type "température de Curie" pour les différentes valeurs de probabilité d'infection. À basse probabilité ($\in [0,0.2]$), à peu près toutes les simulations ne montrent aucune propagation du virus à grande échelle, alors que la proportion de la population en santé à la fin de la simulation est au-dessus de 90\%. Le scénario opposé est vrai à haute probabilité ($\in [0.7,1.0]$), alors qu'à peu près toutes les simulations montrent une population finale entièrement  "morte". Un changement de phase apparaît pour les probabilités entre ces valeurs proposant que la propagation du virus dépend beaucoup de la structure aléatoire du réseau construit. En effet, si un virus passe par un \textit{hub} avant l'atteinte à l'équilibre, la propagation du virus se fera beaucoup plus efficacement, puisqu'un plus grand nombre de personnes pourront contracter celui-ci.
+
+Le second modèle épidémique étudié sera le modèle \textit{SEIR}, où un nouveau paramètre apparaît :
+\begin{itemize}
+	\item \textbf{E} : Après contraction du virus, la personne \textit{Exposée} ne devient pas tout de suite contagieuse. C'est seulement après un certain temps qu'elle devient infectée et qu'elle peut transmettre la maladie.
+\end{itemize}
+
+Ce modèle est un peu plus réaliste que le dernier, puisqu'il prend en compte un certain temps où la personne ayant contracté le virus ne peut pas transmettre celui-ci.
+
+L'algorithme utilisé précédemment changera donc un peu : 
+
+\begin{enumerate}
+	\item On choisit un noeud au hasard dans le réseau et on l'infecte.
+	\item On regarde tous les noeuds voisins des noeuds infectés du réseau. Pour chaque noeud voisin, si un nombre aléatoire tiré est plus petit qu'une certaine probabilité de transmission, le noeud est alors exposé ($S\rightarrow E$).
+	\item Si un noeud est exposé pendant un certain nombre d'itérations, il devient infecté ($E\rightarrow I$)
+	\item Si un noeud est infecté pendant un certain nombre d'itérations, on l'élimine des noeuds contaminés ($I \rightarrow R$).
+	\item On répète les étapes 2 à 4 pour un nombre d'itérations donné.
+\end{enumerate}
+
+L'effet de la probabilité d'infection sur la proportion de la population en santé ne sera pas à l'étude ici, à cause de la similarité avec le dernier modèle. Cependant, il vient intéressant de modifier le nombre d'itération après lesquels un noeud E deviendra un noeud I, ainsi que pour la transformation d'un noeud I en noeud R. La figure \ref{fig:varI_SEIR} montre deux cas où le seuil pour la transformation d'un noeud I en noeud R $t_i$ était respectivement de 3 et 8 itérations pour des valeurs de $p_I=0.5$ la probabilité d'infection et $t_E=5$ le seuil pour la transformation d'un noeud E en noeud I.
+
+\begin{figure}[h]
+\center
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/ti_is_3.png}
+	\end{subfigure}
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/ti_is_8.png}
+	\end{subfigure}
+\caption{\small{Évolution des populations des différentes catégories de personnes pour des simulations avec des seuils de transformation $I \rightarrow R$ de $t_I=3$ et $t_I=8$ selon le modèle épidémique SEIR. La population de noeuds susceptibles de contracter la maladie (en santé) reste non-nulle après l'arrivée à l'équilibre dans la figure de gauche, alors que celle-ci est nulle lorsque la probabilité d'infection est trop élevée, comme dans la figure de droite. Le nombre maximal de personnes infectées ainsi que de personnes exposées en même temps est beaucoup plus grand pour la simulation à droite que celle à gauche. La probabilité $p_I$ d'infection est gardée à $0.5$ et le seuil de transformation $E \rightarrow I$ est gardé à $t_E=5$	.}}
+\label{fig:varI_SEIR}
+\end{figure}
+
+La première chose à remarquer est le fait que l'arrivée à l'équilibre se produit beaucoup plus tard dans pour ce modèle épidémique que pour le modèle SIR étudié précédemment. De plus, le nombre total de personnes \textit{enlevées} (R) à la fin est plus grand lorsque le seuil d'infection est plus élevé. Cela est prévisible, puisqu'un noeud contaminé aura plus de chances de contaminer ses noeuds voisins, vivant plus longtemps ainsi.
+
+Le seuil de transformation $E \rightarrow I$ a ensuite été modifié en gardant $t_I=5$ et $p_I=0.5$ constants. La figure \ref{fig:varE_SEIR} montre la tendance des simulations pour en faisant varier $t_E$ de 2 à 10.
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.7]{figures/1000_var_te.png}
+\caption{\small{Fraction de noeuds susceptibles de contracter la maladie (en santé) à la fin de plusieurs simulations en fonction du seuil $t_E$ pour 90 simulations. Aucune tendance évidente ne semble ressortir du graphique.}}
+\label{fig:SIRvarprobInfec}
+\end{figure}
+
+La distribution de points engendré par les simulations en faisant varier le paramètre $t_E$ ne semble pas faire varier significativement la fraction de noeuds en santé à la fin de la simulation. Cette fraction semble plutôt stable entre 0.2 et 0.4 pour la majorité des $t_E$ testés, les points s'en écartant étant dû au caractère aléatoire de la structure du réseau.
+
+Le dernier modèle épidémique étudié est le modèle \textit{SIRS}. Cette fois-ci, la catégorie de population exposée n'est plus présente, mais une personne ayant déjà été infectée n'est plus immunisée pour le reste de la simulation. Une personne ayant été infectée, puis guérie (il n'y a pas de morts dans ce cas-ci) peut redevenir susceptible de contracter la maladie plus tard. Ce modèle épidémique représente bien une maladie tel qu'un rhume commun, pour lequel il n'est pas possible d'être immunisé.
+
+L'algorithme utilisé pour cette simulation sera donc le suivant :
+\begin{enumerate}
+	\item On choisit un noeud au hasard dans le réseau et on l'infecte.
+	\item On regarde tous les noeuds voisins des noeuds infectés du réseau. Pour chaque noeud voisin, si un nombre aléatoire tiré est plus petit qu'une certaine probabilité de transmission, le noeud est alors infecté ($S\rightarrow I$).
+	\item Si un noeud est infecté pendant un certain nombre d'itérations, on l'élimine des noeuds contaminés ($I \rightarrow R$).
+	\item Si un noeud est guéri depuis un certain nombre d'itérations, il redevient susceptible de contracter la maladie ($R \rightarrow S$).
+	\item On répète les étapes 2 et 3 pour un nombre d'itérations donné.
+\end{enumerate}
+
+Contrairement aux autres modèles, ce modèle est cyclique. Le modèle est étudié en faisant varier les paramètres $t_I$, $p_I$ et $t_R$ séparément. La figure \ref{fig:varpi} montre deux simulations possédant tous les deux des probabilités d'infection différentes, mais avec des $t_I$ et $t_E$ identiques, montrant des comportements plutôt différents.
+
+\begin{figure}[p]
+\center
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/voirinfo2.png}
+	\end{subfigure}
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/voirinfo1.png}
+	\end{subfigure}
+\caption{\small{Évolution des populations des différentes catégories de personnes pour des simulations avec des probabilités d'infection de $0.3$ et $0.7$, respectivement, selon le modèle épidémique SRIS. Lorsque la probabilité est basse, le système tend vers un état plutôt stable sans grande fluctuation de populations. Cependant, lorsque la probabilité d'infection est plus grande, le système rentre dans un état stationnaire. Pour ces simulations, les seuils sont fixés à $t_I=10$ et $t_R=5$.}}
+\label{fig:varpi}
+\end{figure}
+
+Les différentes simulations trouvent un état d'équilibre de sorte qu'il y a toujours une partie de la population dans chaque catégorie (en omettant la population \textit{exposée} omise de ce modèle). Cependant, plus la probabilité d'infection est élevée, plus il y a une grande fluctuation de ces populations dans le temps, et ce, de façon périodique. En gardant la probabilité d'infection constante à 0.5 et en faisant varier le seuil $I \rightarrow R$, la figure \ref{fig:varseuil1SIRS} est obtenue, pour deux cas distincts. De plus, la figure \ref{fig:varseuil2SIRS} montre un graphique où une chaque pixel représente une moyenne sur 10 itération de la fraction de la population en santé sur la population totale à la fin de la simulation pour une certaine combinaison $(t_I,t_R)$.
+
+\begin{figure}[p]
+\center
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/varseuil2.png}
+	\end{subfigure}
+	\begin{subfigure}[h]{0.48\textwidth}
+	\includegraphics[scale=0.6]{figures/varseuil1.png}
+	\end{subfigure}
+\caption{\small{Évolution des populations des différentes catégories de personnes pour des simulations avec des seuils $t_I$ de 5 et 6, respectivement, selon le modèle épidémique SRIS. Lorsque le seuil de population infectée est de 5, le virus est rapidement irradié de la simulation, alors que la solution retrouve un état d'équilibre identique à son état initial. Cependant, lorsque le seuil est plutôt de 6, une situation d'équilibre différente est obtenue, encore une fois avec des fluctuations plutôt périodiques.}}
+\label{fig:varseuil1SIRS}
+\end{figure}
+
+\begin{figure}[p]
+\center
+\includegraphics[scale=0.7]{figures/yessirmiller43.png}
+\caption{\small{Moyenne des fraction de la population en santé pour différentes combinaisons de seuil $t_I$ et $t_R$.}}
+\label{fig:varseuil2SIRS}
+\end{figure}
+
+La figure \ref{fig:varseuil2SIRS} montre clairement le caractère observé sur les simulations présentés à la figure \ref{fig:varseuil1SIRS} : une simulation possédant un seuil $k_I$ de 5 ou moins reviendra à la situation initiale avant la fin de la simulation. Cependant, pour $k_I\ge6$, la simulation se retrouvera dans la plupart des cas dans une situation d'équilibre où la fraction de chaque population reste non-nulle, en fluctuant ou non. Cette caractéristique semble dépendre seulement du seuil $k_I$ et non du seuil $k_R$, signe que le temps pour qu'une particule guérie redevienne susceptible de contracter le virus a peu d'importance sur la conclusion de la simulation.
+
+Des animations de la propagation de virus dans un réseau suivant le modèle de Barabási-Albert sont disponibles pour les trois types de modèles épidémiques étudiés sur le dépôt public mentionné plus tôt. Il est intéressant de voir ce qui se passe lorsqu'un \textit{hub} devient infecté, après quoi la propagation du virus se fait beaucoup plus rapidement, comme on pourrait l'imaginer si une personne atteinte d'une maladie comme Ebola passait par un aéroport important, pour revenir à l'exemple du début de cette section. 
+
+
+\clearpage
+\section{Programme}
+
+\renewcommand{\baselinestretch}{1.} 
+\subsection{Programme principal}
+\verbatiminput{codes/calcul_reseau.py}
+
+\subsection{Programme d'exploration numérique : Modèle de Barabási-Albert}
+\verbatiminput{barabasi_albert_exploration.py}
+
+
+\begin{thebibliography}{1}
+
+\small
+\bibitem{notes_chap_2} Charbonneau, P., \textit{PHY3075 - Modélisation numérique en physique, Chapitre 3 : Équations différentielles partielles}, Université de Montréal, Montréal, 2017, 34p.
+\bibitem{network_science} Barabási, A.L., \textit{Network Science}, Cambridge University Press, Cambridge, United Kingdom, 2016, 456p.
+\bibitem{SIR} Smith?, R., «Simple Epidemic Models», [En ligne], University of Ottawa, [s.d.], 26p., \url{http://mysite.science.uottawa.ca/rsmith43/MAT4996/Epidemic.pdf}
+\bibitem{epidemic} Wikipedia, «Epidemic Model», [En ligne], Wikipedia, [s.d.], \url{https://en.wikipedia.org/wiki/Epidemic_model}
+
+
+\end{thebibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Annexes %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

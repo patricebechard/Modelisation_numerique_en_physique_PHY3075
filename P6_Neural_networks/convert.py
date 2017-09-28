@@ -1,0 +1,1 @@
+open('results3.txt','w').write((open('results.txt').read().replace('\n', '')))
