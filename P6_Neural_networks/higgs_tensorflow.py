@@ -1,27 +1,29 @@
-import os				#no warning messages
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+import os	
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'          #no warning messages
 
-import tensorflow as tf
+import tensorflow as tf                         # ML library
 import numpy as np
 import copy
 import sys
 import matplotlib.pyplot as plt
 
-higgs = True
-exam = True
-actv = 2                                #0: logistic, 1: tanh, 2: ReLU
-optim_function = 0                      #0: AdamOptimizer, 1: Gradient descent, 2: RMS Prop, 3: AdaGrad
-nIter = 1001
+#-------------------------------Global variables--------------------------------
 
-RANDOM_SEED = 425
+higgs = True                            #True : Higgs detection, False : 12 bits string
+exam = True                             #True : applying on exam set
+actv = 2                                #0: logistic, 1: tanh, 2: ReLU
+optim_function = 0        #0: AdamOptimizer, 1: Gradient descent, 2: RMS Prop, 3: AdaGrad
+nIter = 50000
+batch_size = 50
+
+RANDOM_SEED = 42                        
 tf.set_random_seed(RANDOM_SEED)
 
 if higgs:                               #we train the network on the higgs data
     filetraining = 'trainingset.txt'    #training set
     nTraining = 1500
     nTest = 2000 - nTraining
-
-    nNeurons = [13,10,6,2]
+    nNeurons = [13,10,8,2]              #architecture of network
     learningrate = 0.00001
 else:                                   #we train the network on strings of bits
     filetraining = 'bitstrings_train.txt' #training set
@@ -29,19 +31,22 @@ else:                                   #we train the network on strings of bits
     filetest = 'bitstrings_test.txt'      #test set
     nTest = 1000
 
-    nNeurons = [12,6,2]
-    learningrate = 0.001
+    nNeurons = [12,6,2]                 #architecture of network
+    learningrate = 0.01
 
 nLayers = len(nNeurons)
+
+#--------------------------------Functions--------------------------------------
 
 def init_weights(shape):
     """ Weight initialization """
     return tf.Variable(tf.random_normal(shape))
 
 def model(x,wMatrix,p_keep_input,p_keep_hidden):
-    x = tf.nn.dropout(x,p_keep_input)
-    h = [[] for i in range(nLayers-1)]
-    h[0] = copy.copy(x)
+    """Propagation of input through the neural network"""
+    x = tf.nn.dropout(x,p_keep_input)   #we keep only with some probability
+    h = [[] for i in range(nLayers-1)]  
+    h[0] = copy.copy(x)                 #sentinel
     for i in range(1,nLayers-1):
         if actv == 0:                   #logistic
             h[i] = tf.sigmoid(tf.matmul(h[i-1],wMatrix[i-1]))
@@ -51,22 +56,21 @@ def model(x,wMatrix,p_keep_input,p_keep_hidden):
             h[i] = tf.nn.relu(tf.matmul(h[i-1],wMatrix[i-1]))
         h[i] = tf.nn.dropout(h[i],p_keep_hidden)   #probability of keeping change
 
-    return tf.matmul(h[-1],wMatrix[-1])
+    return tf.matmul(h[-1],wMatrix[-1]) #return output
 
 def init_bits(file,nSample):
+    """Initialization of 12 bits data from txt file"""
     f = open(file)
     f.readline()
     tset = np.zeros([nSample,nNeurons[0]])
     oset = np.zeros([nSample,nNeurons[-1]])
     for i in range(nSample):
         temp = f.readline().strip().split()
-        print(temp)
-        sys.exit()
         tset[i] = np.array(list(temp[0]),dtype=int)
         if int(temp[-1]):              # consecutive bit strings
-            oset[i] = [1,0]
-        else:
             oset[i] = [0,1]
+        else:
+            oset[i] = [1,0]
     return tset,oset
 
 def init_set(f,nSample,exam=False):
@@ -84,32 +88,30 @@ def init_set(f,nSample,exam=False):
               oset[i] = [1,0]
             else:
               oset[i] = [0,1]
-    for i in range(13):
-        """feature scaling and mean normalization"""
-        moy = np.mean(tset[:,i])
-        sigma = np.std(tset[:,i])
-        tset[:,i] = (tset[:,i]-moy)/sigma
-
+    #normalisation of values
+    #for i in range(13):
+    #    tset[:,i] /= abs(max(max(tset[:,i]), min(tset[:,i]), key=abs))
     return tset,oset
 
 def main(optim_function,learningrate):
     if higgs:
+        """Higgs detection"""
         f = open(filetraining)
         f.readline()
-        train_x, train_y = init_set(f,nTraining)
-        test_x, test_y = init_set(f,nTest)
+        train_x, train_y = init_set(f,nTraining)     #initializing data
+        test_x, test_y = init_set(f,nTest)          
         if exam:
-            fileexam = 'examset.txt'        #exam set
+            fileexam = 'examset.txt'                 #exam set
             g = open(fileexam)
-            g.seek(0)
-            g.readline()
+            g.readline()    
             nExam = 1000
-            exam_x, exam_y = init_set(g,nExam,exam=True)
+            exam_x, exam_y = init_set(g,nExam,exam=True) #init exam data
     else:
+        """5 straight in 12 bits"""
         train_x, train_y = init_bits(filetraining,nTraining)
         test_x, test_y = init_bits(filetest,nTest)
-
-    costtrain, costtest = [], []
+    
+    costtrain, costtest = [], []                    #empty arrays to plot later
 
     # Symbols
     x = tf.placeholder("float", [None,nNeurons[0]])
@@ -125,16 +127,18 @@ def main(optim_function,learningrate):
     py_x = model(x,wMatrix,p_keep_input,p_keep_hidden)
 
     # Backward propagation
-    cost    = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=py_x))
-    #cost    = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y, logits=py_x))
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits   
+                                                (labels=y, logits=py_x))
+    #cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits
+    #                                           (labels=y, logits=py_x))
 
-    if optim_function == 0:
+    if optim_function == 0:     #adam optimizer
         updates = tf.train.AdamOptimizer(learningrate).minimize(cost)
-    elif optim_function == 1:
+    elif optim_function == 1:   #gradient descent optimizer
         updates = tf.train.GradientDescentOptimizer(learningrate).minimize(cost)
-    elif optim_function == 2:
+    elif optim_function == 2:   #RMSProp optimizer
         updates = tf.train.RMSPropOptimizer(learningrate).minimize(cost)
-    elif optim_function == 3:
+    elif optim_function == 3:   #AdaGrad optimizer
         updates = tf.train.AdagradOptimizer(learningrate).minimize(cost)
     predict = tf.argmax(py_x,1)
 
@@ -142,35 +146,20 @@ def main(optim_function,learningrate):
         sess.run(tf.global_variables_initializer())	#init all variables
         #saver = tf.train.Saver()
 
-        batch_size = 100
-
         for epoch in range(nIter+1):
             # Train with each example
-            #for i in range(len(train_x)):
-            order = np.random.permutation(np.arange(nTraining))
-
+            order = np.random.permutation(np.arange(nTraining)) #shuffling data
             i = 0
-            while i < len(order):
+            while i < len(order):           #updating neural net
                 start = i
                 end = i + batch_size
-
                 X = np.array(train_x[order[start:end]])
                 Y = np.array(train_y[order[start:end]])
                 sess.run(updates, feed_dict={x: X, y: Y,
                                 p_keep_input: 1, p_keep_hidden: 1})
                 i += batch_size
-
-            #print(sess.run(predict, feed_dict={x: train_x,
-            #                         p_keep_input: 1., p_keep_hidden: 1.}))
-            #print(sess.run(py_x, feed_dict={x: train_x,
-            #                         p_keep_input: 1., p_keep_hidden: 1.}))
-
-
-            #print(sess.run(tf.reduce_mean(cost),feed_dict={x: train_x, y: train_y,
-            #                         p_keep_input: 1., p_keep_hidden: 1.}))
-            #costvalues.append(sess.run(tf.reduce_mean(cost),feed_dict=
-            #        {x: train_x, y: train_y,p_keep_input: 1., p_keep_hidden: 1.}))
-            if epoch % 100 == 0:
+            
+            if epoch % 100 == 0:            #showing relevant info
                 results_train = sess.run(predict, feed_dict={x: train_x,
                                      p_keep_input: 1., p_keep_hidden: 1.})
                 results_test = sess.run(predict, feed_dict={x: test_x,
@@ -185,12 +174,11 @@ def main(optim_function,learningrate):
                         else:                 #faux negatif
                             results_matrix[1][0] += 1
                     else:
-                        if results_train[k]:   #faux positif
+                        if results_train[k]:  #faux positif
                             results_matrix[0][1] += 1
-                        else:
+                        else:                 #faux negatif
                             results_matrix[0][0] += 1
 
-            #if epoch in [1,2,5,10,20,50,100,200,500,1000,2000,5000]:
                 print("Epoch = %d, train accuracy = %.2f%%, test accuracy = %.2f%%"
                      % (epoch , 100. * train_accuracy, 100. * test_accuracy))
                 costing = sess.run(tf.reduce_mean(cost),feed_dict=
@@ -198,18 +186,11 @@ def main(optim_function,learningrate):
                 print("cost function value : ",costing)
                 print(results_matrix)
 
-                costtrain.append(costing)
+                costtrain.append(costing)           #to plot later
                 costtest.append(sess.run(tf.reduce_mean(cost),feed_dict={x: test_x,
                     y: test_y, p_keep_input: 1., p_keep_hidden: 1.}))
-            """
-            if epoch in [1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000]:
-                costing = sess.run(tf.reduce_mean(cost),feed_dict=
-                    {x: train_x, y: train_y,p_keep_input: 1., p_keep_hidden: 1.})
-                costtrain.append(costing)
-                costtest.append(sess.run(tf.reduce_mean(cost),feed_dict={x: test_x,
-                    y: test_y, p_keep_input: 1., p_keep_hidden: 1.}))
-            """
-            if epoch == nIter and exam:
+
+            if epoch == nIter and exam:         #evaluating exam set
                 results_train = sess.run(predict, feed_dict={x: train_x,
                                      p_keep_input: 1., p_keep_hidden: 1.})
                 results_test = sess.run(predict, feed_dict={x: exam_x,
@@ -221,48 +202,25 @@ def main(optim_function,learningrate):
                     {x: train_x, y: train_y,p_keep_input: 1., p_keep_hidden: 1.})
                 print("cost function value : ",costing)
                 print(results_matrix)
-                testing(results_test)
-                h = open('results.txt','w')
-                print(results_test)
+                h = open('results.txt','w')     #saving results
                 for i in range(nExam):
                     h.write(str(results_test[i])+'\n')
 
-        #create_stats_fig()
         #saver.save(sess,"/tmp/higgs_ffnn.ckpt")
     return costtrain,costtest
 
-def testing(results):
-    h = open('resultsnicelin.txt','w')
-    yes = open('cacatryyy','w')
-    h2 = open('resultsnicecol.txt','w')
-    string = ''
-    for i in results:
-        val = (i + 1)%2
-        string += str(val)
-    h.write(string)
-    for c in string:
-        h2.write(c + '\n')
+#--------------------------MAIN-------------------------------------------------
 
-    print((results + 1)%2)
-
-if __name__ == '__main__':
-
-    ls = ['r:','g--','b-.','k-']
-    ms = ['rs','g^','bo','k*']
-    #plotlabels = ['Adam','Gradient Descent','RMSProp','AdaGrad']
-    plotlabels = ['sigmoid','tanh','ReLU']
-    for i in [2]:
-        costtrain,costtest = main(i,0.001)
-
-        plt.loglog(np.arange((nIter-1)//100 + 1)*100,costtrain,ls[i],label=plotlabels[i])
-        plt.loglog(np.arange((nIter-1)//100 + 1)*100,costtest,ms[i],mfc='none')
-
-
-    plt.legend(fancybox=True,shadow=True)
-    plt.xlabel("Itérations Entraînement")
-    plt.ylabel("Valeur de la fonction de coût")
-    plt.axis([1,nIter,0.1,10])
-    plt.savefig("cost_optimizer.png")
-
-    #plt.show()
-
+ls = ['r:','g--','b-.','k-']        # line styles
+ms = ['rs','g^','bo','k*']          # marker styles
+#plotlabels = ['Adam','Gradient Descent','RMSProp','AdaGrad']
+plotlabels = ['sigmoid','tanh','ReLU']
+for i in [2]:
+    costtrain,costtest = main(i,0.001)
+    plt.loglog(np.arange((nIter-1)//100 + 1)*100,costtrain,ls[i],label=plotlabels[i])
+    plt.loglog(np.arange((nIter-1)//100 + 1)*100,costtest,ms[i],mfc='none') 
+plt.legend(fancybox=True,shadow=True)
+plt.xlabel("Itérations Entraînement")
+plt.ylabel("Valeur de la fonction de coût")
+plt.axis([100,nIter,0.1,10])
+plt.savefig("cost_optimizer.png")

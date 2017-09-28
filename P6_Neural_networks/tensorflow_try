@@ -1,8 +1,0 @@
-#
-# Patrice Bechard
-#
-# Tensor Flow first try
-#
-#
-
-import tensorflow as tf
